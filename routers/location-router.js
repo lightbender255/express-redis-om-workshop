@@ -1,8 +1,11 @@
 import { Router } from 'express'
-import { personRepository } from '../om/person.js'
+import { playerRepository } from '../om/player.js'
+import { connection } from '../om/client.js'
 
 export const router = Router()
 
+// To see the history of a Player's location use this in the REDInsight Workbench
+// XRANGE Player:01FYC7CTPKYNXQ98JSTBC37AS1:locationHistory - +
 router.patch('/:id/location/:lng,:lat', async (req, res) => {
 
   const id = req.params.id
@@ -11,10 +14,13 @@ router.patch('/:id/location/:lng,:lat', async (req, res) => {
 
   const locationUpdated = new Date()
 
-  const person = await personRepository.fetch(id)
-  person.location = { longitude, latitude }
-  person.locationUpdated = locationUpdated
-  await personRepository.save(person)
+  const player = await playerRepository.fetch(id)
+  player.location = { longitude, latitude }
+  player.locationUpdated = locationUpdated
+  await playerRepository.save(player)
+
+  let keyName = `${player.keyName}:locationHistory`
+  await connection.xAdd(keyName, '*', player.location)
 
   res.send({ id, locationUpdated, location: { longitude, latitude } })
 })
